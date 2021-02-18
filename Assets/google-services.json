@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "620570136285",
+    "firebase_url": "https://hajwala-mobile-default-rtdb.firebaseio.com",
+    "project_id": "hajwala-mobile",
+    "storage_bucket": "hajwala-mobile.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:620570136285:android:c83f7ba464f47111cb5534",
+        "android_client_info": {
+          "package_name": "com.rababagames.hajwalah"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "620570136285-jjopvkden8utog1odn07jd135raebdej.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB9KFbZ7WNf1LYSj97RRdCtsAISeJnvtqw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "620570136285-jjopvkden8utog1odn07jd135raebdej.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "620570136285-rnqjkrgqg22j5cc39bsvotei7nq98ks4.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.rababagames.hajwalah"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
