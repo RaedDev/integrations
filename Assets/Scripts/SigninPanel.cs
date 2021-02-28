@@ -2,23 +2,25 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class SigninPanel : MonoBehaviour
 {
     public GameObject emailPanel;
     public GameObject newUserPanel;
+    public ProfilePanel profilePanel;
 
     public InputField emailField;
     public InputField passwordField;
 
     public void SigninWithGoogle()
     {
-        FirebaseManager.Test();
+        FirebaseManager.AddUser();
     }
 
     public void SigninWithApple()
     {
-
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
     public void GoToSignWithEmail()
@@ -38,7 +40,7 @@ public class SigninPanel : MonoBehaviour
             Debug.LogError("Password is too short");
         }
 
-        FirebaseManager.SigninWithEmail(emailField.text, passwordField.text, OnLoggedIn);
+        FirebaseManager.SigninWithEmail(emailField.text, passwordField.text);
     }
 
     public void SignupWithEmail()
@@ -53,10 +55,15 @@ public class SigninPanel : MonoBehaviour
             Debug.LogError("Password is too short");
         }
 
-        FirebaseManager.SignupWithEmail(emailField.text, passwordField.text, OnLoggedIn);
+        FirebaseManager.SignupWithEmail(emailField.text, passwordField.text);
     }
 
-    void OnLoggedIn(LoginResult result)
+    public void SignInAnonymously()
+    {
+        FirebaseManager.SigninAnonymously();
+    }
+
+    public void OnLoggedIn(LoginResult result)
     {
         if (result == LoginResult.NewUser)
         {
@@ -64,7 +71,10 @@ public class SigninPanel : MonoBehaviour
         }
         else if (result == LoginResult.Successful)
         {
-            print("Done!");
+            FirebaseManager.GetUser(FirebaseManager.auth.CurrentUser.UserId, u =>
+            {
+                profilePanel.Setup(FirebaseManager.user);
+            });
         }
     }
     

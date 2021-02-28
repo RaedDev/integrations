@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
+using Firebase.Extensions;
 
 public class ProfilePanel : MonoBehaviour
 {
@@ -10,33 +11,70 @@ public class ProfilePanel : MonoBehaviour
     public Text bioText;
     public Image image;
 
+    public Transform requestsContent;
+    public GameObject requestPrefab;
+
+    public Transform friendsContent;
+    public GameObject friendPrefab;
+
+    public static User currentUser;
+
     public void Setup(User user)
     {
-        StartCoroutine(_Setup(user));
-    }
+        currentUser = user;
+        gameObject.SetActive(true);
 
-    IEnumerator _Setup(User user)
-    {
         nameText.text = user.username;
         bioText.text = user.bio;
 
-        if (user.img != null)
+        SetupFriendRequests(user);
+        SetupFriendList(user);
+
+
+        NetworkHelper.DownloadSprite(this, user.img, sprite => image.sprite = sprite);
+    }
+
+    void SetupFriendRequests(User user)
+    {
+        foreach(Transform t in requestsContent)
         {
+            Destroy(t.gameObject);
+        }
 
-            UnityWebRequest www = UnityWebRequestTexture.GetTexture(user.img);
-            yield return www.SendWebRequest();
-            if (www.isNetworkError || www.isHttpError)
+        if (user.requests != null)
+        {
+            foreach (var req in user.requests)
             {
-                Debug.Log(www.error);
+                FirebaseManager.GetUser(req, u =>
+                {
+                    var o = Instantiate(requestPrefab, requestsContent);
+                    o.GetComponent<FriendRequestItem>().Setup(req, u.username);
+                });
             }
-            else
-            {
-                Texture2D texture = ((DownloadHandlerTexture)www.downloadHandler).texture;
-                Rect rec = new Rect(0, 0, texture.width, texture.height);
+        }
+    }
 
-                Sprite userSprite = Sprite.Create(texture, rec, new Vector2(0.5f, 0.5f), 100);
-                image.sprite = userSprite;
-            }
+    void SetupFriendList(User user)
+    {
+        foreach (Transform t in friendsContent)
+        {
+            Destroy(t.gameObject);
+        }
+
+        foreach (string friend in user.friends)
+        {
+            FirebaseManager.usersCollection.Document(friend).GetSnapshotAsync().ContinueWithOnMainThread(task =>
+            {
+                if (!task.IsCompleted)
+                {
+                    ErrorHandler.Show("Unable to find friend data, please check your internet connection");
+                    return;
+                }
+                var u = task.Result.ConvertTo<User>();
+                u.uid = task.Result.Id;
+                var o = Instantiate(friendPrefab, friendsContent);
+                o.GetComponent<FriendListItem>().Setup(u.uid, u.username);
+            });
         }
     }
 }

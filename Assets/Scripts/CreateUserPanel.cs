@@ -12,10 +12,9 @@ public class CreateUserPanel : MonoBehaviour
 
     public void Submit()
     {
-        User u = new User() { bio = bio.text, username = username.text };
+        User u = new User() { bio = bio.text, username = username.text, uid = FirebaseManager.auth.CurrentUser.UserId };
         FirebaseManager.SetUser(u);
 
-        profilePanel.gameObject.SetActive(true);
         profilePanel.Setup(u);
     }
 }

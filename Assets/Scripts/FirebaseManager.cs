@@ -7,6 +7,7 @@ using Firebase.Auth;
 using System;
 using System.Linq;
 using Firebase.Extensions;
+using Firebase.Database;
 
 public enum LoginResult
 {
@@ -18,41 +19,115 @@ public enum LoginResult
 public static class FirebaseManager
 {
     public static bool ready = false;
-    public static FirebaseAuth auth { get => FirebaseAuth.DefaultInstance; }
-    
-    static FirebaseUser fbUser;
-    static User user;
+    public static FirebaseAuth auth { get { return FirebaseAuth.DefaultInstance; } }
 
-    public static FirebaseFirestore db { get => FirebaseFirestore.DefaultInstance; } 
-    public static CollectionReference campaignsCollection { get => db.Collection("campaigns"); }
-    public static CollectionReference usersCollection { get => db.Collection("users"); }
+    static FirebaseUser fbUser;
+    public static User user;
+
+    public static FirebaseFirestore db { get { return FirebaseFirestore.DefaultInstance; } }
+    public static CollectionReference campaignsCollection { get { return db.Collection("campaigns"); } }
+    public static CollectionReference usersCollection { get { return db.Collection("users"); } }
+    public static CollectionReference conversationsCollection { get { return db.Collection("conversations"); } }
+    public static CollectionReference notesCollection { get { return db.Collection("notes"); } }
 
     static List<Campaign> campaigns = null;
     static List<Campaign> loadedCampaigns = new List<Campaign>();
 
-    public static void InitializeFirebase()
+    static Action<LoginResult> defaultSignedInAction;
+    static Action defaultOnSignedOut;
+
+    static IAPManager iapManager;
+
+    public static void InitializeFirebase(Action<LoginResult> onSignedIn = null, Action onSignedOut = null)
     {
         if (ready) return;
+
+        LoadingPanel.ShowLoading();
 
         FirebaseApp.CheckAndFixDependenciesAsync().ContinueWithOnMainThread(task => {
             var dependencyStatus = task.Result;
             if (dependencyStatus == DependencyStatus.Available)
             {
+                defaultSignedInAction = onSignedIn;
+                defaultOnSignedOut = onSignedOut;
+
                 auth.StateChanged += AuthStateChanged;
-                AuthStateChanged(null, null);
 
                 Firebase.Messaging.FirebaseMessaging.TokenReceived += OnTokenReceived;
                 Firebase.Messaging.FirebaseMessaging.MessageReceived += OnMessageReceived;
 
                 GetCampaigns();
+                LoadStartupNotes();
 
                 ready = true;
+
+                if (auth.CurrentUser == null)
+                {
+                    LoadingPanel.Hide();
+                }
             }
             else
             {
-                Debug.LogError(String.Format(
-                  "Could not resolve all Firebase dependencies: {0}", dependencyStatus));
-                // Firebase Unity SDK is not safe to use here.
+                ErrorHandler.Show(string.Format("Could not resolve all Firebase dependencies: {0}", dependencyStatus));
+            }
+        });
+    }
+
+    static void LoadStartupNotes()
+    {
+        notesCollection.GetSnapshotAsync().ContinueWithOnMainThread(task =>
+        {
+            if(!task.IsCompleted)
+            {
+                return;
+            }
+
+            var docs = task.Result.Documents.ToList();
+            foreach (var doc in docs)
+            {
+                StartupNotice.ShowNote(doc.GetValue<string>("type"), "", null);
+            }
+        });
+    }
+
+    public static DatabaseReference GetConversationRef(string conversationId)
+    {
+        return FirebaseDatabase.DefaultInstance.GetReference("conversations/" + conversationId);
+    }
+
+    public static void GetConversationWith(User other, Action<string> callback)
+    {
+        if(other.uid == user.uid)
+        {
+            ErrorHandler.Show("Trying to open conversation with the local user");
+            return;
+        }
+
+        conversationsCollection.WhereArrayContainsAny("users", new List<object>() { other.uid, user.uid } ).GetSnapshotAsync().ContinueWithOnMainThread(task =>
+        {
+            if (!task.IsCompleted)
+            {
+                ErrorHandler.Show("Error while opening conversation please check your internet connection");
+                return;
+            }
+
+            if (task.Result.Documents.Count() == 0)
+            {
+                Conversation conv = new Conversation()
+                {
+                    users = new List<string>() {
+                    user.uid, other.uid
+                }
+                };
+
+                conversationsCollection.AddAsync(conv).ContinueWithOnMainThread(addTask =>
+                {
+                    callback(addTask.Result.Id);
+                });
+            }
+            else
+            {
+                callback(task.Result.Documents.First().Id);
             }
         });
     }
@@ -67,25 +142,25 @@ public static class FirebaseManager
         Debug.Log("Received a new message from: " + e.Message.From);
     }
 
-
     static void GetCampaigns()
     {
         campaignsCollection.GetSnapshotAsync().ContinueWithOnMainThread(task =>
         {
-            if(task.IsFaulted)
+            if(task.IsCompleted)
             {
-                Debug.LogError("Firebase firestore connection error can't get campaigns");
-                return;
+                campaigns = task.Result.Documents.Select(doc => { var c = doc.ConvertTo<Campaign>(); c.id = doc.Id; return c; })
+                    .Where(campaign => campaign.expiryDate > DateTime.Now || campaign.expiryDate.Ticks == 0).ToList();
             }
-            Debug.Log("campaigns are ready");
-            campaigns = task.Result.Documents.Select(doc => { var c = doc.ConvertTo<Campaign>(); c.id = doc.Id; return c; })
-                .Where(campaign => campaign.expiryDate > DateTime.Now || campaign.expiryDate.Ticks == 0).ToList();
+            else
+            {
+                ErrorHandler.Show("Firebase firestore connection error can't get campaigns");
+            }
         });
     }
 
     public static Campaign GetAd(int capacity = -1)
     {
-        if(campaigns == null)
+        if (campaigns == null)
         {
             GetCampaigns();
             return _GetAd(Campaign.defaultCampaigns, capacity);
@@ -129,7 +204,7 @@ public static class FirebaseManager
         {
             selectedCampaign = options[++index % options.Count];
             c++;
-            if(c > options.Count)
+            if (c > options.Count)
             {
                 return _GetAd(Campaign.defaultCampaigns, capacity);
             }
@@ -137,7 +212,7 @@ public static class FirebaseManager
 
         loadedCampaigns.Add(selectedCampaign);
         selectedCampaign.impressions++;
-        if(selectedCampaign.id != null && selectedCampaign.id != "")
+        if (selectedCampaign.id != null && selectedCampaign.id != "")
         {
             campaignsCollection.Document(selectedCampaign.id).SetAsync(selectedCampaign);
         }
@@ -151,20 +226,17 @@ public static class FirebaseManager
             bool signedIn = fbUser != auth.CurrentUser && auth.CurrentUser != null;
             if (!signedIn && fbUser != null)
             {
-                Debug.Log("Signed out " + fbUser.UserId);
+                defaultOnSignedOut?.Invoke();
             }
             fbUser = auth.CurrentUser;
             if (signedIn)
             {
-                Debug.Log("Signed in " + fbUser.UserId);
-                //displayName = user.DisplayName ?? "";
-                //emailAddress = user.Email ?? "";
-                //photoUrl = user.PhotoUrl ?? "";
+                OnSignedIn(null);
             }
         }
     }
 
-    public static void SigninWithEmail(string email, string password, Action<LoginResult> onLoggedIn)
+    public static void SigninWithEmail(string email, string password)
     {
         auth.SignInWithEmailAndPasswordAsync(email, password).ContinueWithOnMainThread(task => {
             if (task.IsCanceled)
@@ -180,20 +252,13 @@ public static class FirebaseManager
 
             // Firebase user has been created.
             fbUser = task.Result;
-
-            OnLoggedIn(onLoggedIn);
         });
     }
 
-    public static void SignupWithEmail(string email, string password, Action<LoginResult> onLoggedIn)
+    public static void SignupWithEmail(string email, string password)
     {
         auth.CreateUserWithEmailAndPasswordAsync(email, password).ContinueWithOnMainThread(task => {
-            if (task.IsCanceled)
-            {
-                Debug.LogError("CreateUserWithEmailAndPasswordAsync was canceled.");
-                return;
-            }
-            if (task.IsFaulted)
+            if (!task.IsCompleted)
             {
                 Debug.LogError("CreateUserWithEmailAndPasswordAsync encountered an error: " + task.Exception);
                 return;
@@ -201,43 +266,75 @@ public static class FirebaseManager
 
             // Firebase user has been created.
             fbUser = task.Result;
-            OnLoggedIn(onLoggedIn);
         });
     }
 
-    static void OnLoggedIn(Action<LoginResult> onLoggedIn)
+    public static void SigninAnonymously()
     {
+        auth.SignInAnonymouslyAsync().ContinueWithOnMainThread(task =>
+        {
+            if (!task.IsCompleted)
+            {
+                Debug.LogError("Something went wrong check your internet connection");
+                return;
+            }
+
+            // Firebase user has been created.
+            fbUser = task.Result;
+        });
+    }
+
+    public static void SignOut()
+    {
+        auth.SignOut();
+    }
+
+    static void OnSignedIn(Action<LoginResult> onSignedIn)
+    {
+        if(onSignedIn == null)
+        {
+            onSignedIn = defaultSignedInAction;
+        }
         usersCollection.Document(fbUser.UserId).GetSnapshotAsync().ContinueWithOnMainThread(task =>
         {
+            LoadingPanel.Hide();
             if (task.IsCompleted)
             {
                 if (!task.Result.Exists)
                 {
-                    onLoggedIn(LoginResult.NewUser);
+                    onSignedIn?.Invoke(LoginResult.NewUser);
                 }
                 else
                 {
-                    onLoggedIn(LoginResult.Successful);
+                    user = task.Result.ConvertTo<User>();
+                    user.uid = task.Result.Id;
+                    iapManager = new IAPManager();
+                    iapManager.Initlize();
+
+                    onSignedIn?.Invoke(LoginResult.Successful);
                 }
             }
             else
             {
-                onLoggedIn(LoginResult.Failure);
+                onSignedIn?.Invoke(LoginResult.Failure);
                 return;
             }
         });
     }
 
-    public static void SetUser(User user)
+    public static void SetUser(User u)
     {
-        usersCollection.Document(user.uid).SetAsync(user).ContinueWithOnMainThread(task =>
+        if(user == null)
         {
-            if(task.IsCompleted)
-            {
-                return;
-            }
+            user = u;
+        }
 
-            Debug.LogError("Can't set user");
+        usersCollection.Document(u.uid).SetAsync(u).ContinueWithOnMainThread(task =>
+        {
+            if (!task.IsCompleted)
+            {
+                ErrorHandler.Show("Can't set user");
+            }
         });
     }
 
@@ -246,10 +343,9 @@ public static class FirebaseManager
         Credential credential = GoogleAuthProvider.GetCredential("", null);
         auth.SignInWithCredentialAsync(credential).ContinueWithOnMainThread(task =>
         {
-            if(task.IsFaulted)
+            if (!task.IsCompleted)
             {
-                Debug.LogError("Something went wrong");
-                return;
+                ErrorHandler.Show("Something went wrong");
             }
         });
     }
@@ -259,31 +355,138 @@ public static class FirebaseManager
         User u = new User();
         u.username = "Ahmad";
         u.bio = "Mohammad";
-        u.products = new List<Product>() { new Product { product = "Lite", expiryDate = DateTime.Now }, };
-        u.img = "haha";
 
         db.Collection("users").Document().SetAsync(u).ContinueWithOnMainThread(task =>
         {
-            if (task.IsFaulted)
+            if (!task.IsCompleted)
             {
-                Debug.LogError("Something went wrong while adding user data");
+                ErrorHandler.Show("Something went wrong while adding user data");
                 return;
             }
-
-            Debug.Log("Done!");
         });
     }
 
-    public static void GetUser(string uid, Func<User, User> callback)
+    public static void GetUser(string uid, Action<User> callback)
     {
         usersCollection.Document(uid).GetSnapshotAsync().ContinueWithOnMainThread(task =>
         {
-            if(task.IsFaulted)
+            if (!task.IsCompleted)
             {
-                Debug.LogError("Something went wrong");
+                ErrorHandler.Show("Cannot get user check your internet conncetion");
                 return;
             }
-            callback(task.Result.ConvertTo<User>());
+            User u = task.Result.ConvertTo<User>();
+            u.uid = uid;
+
+            callback(u);
+        });
+    }
+
+    public static void AddFriend(string uid)
+    {
+        if (uid == user.uid)
+        {
+            ErrorHandler.Show("Can't add yourself!, current user: " + uid + ", firebase user: " + user.uid);
+            return;
+        }
+
+        if (user.sentRequests.Contains(uid))
+        {
+            ErrorHandler.Show("Friend request is already sent");
+            return;
+        }
+        var update = new Dictionary<string, object>() { { "requests", FieldValue.ArrayUnion(user.uid) } };
+
+        usersCollection.Document(uid).UpdateAsync(update).ContinueWithOnMainThread(task =>
+        {
+            if (!task.IsCompleted)
+            {
+                ErrorHandler.Show("Cannot send friend request check your internet connection");
+                return;
+            }
+
+            var localUpdate = new Dictionary<string, object>() { { "sentRequests", FieldValue.ArrayUnion(uid) } };
+            usersCollection.Document(user.uid).UpdateAsync(localUpdate).ContinueWithOnMainThread(task2 =>
+            {
+                user.sentRequests.Add(uid);
+            });
+        });
+    }
+
+    public static void AcceptFriend(string uid)
+    {
+        var update = new Dictionary<string, object>() { { "requests", FieldValue.ArrayRemove(uid) }, { "friends", FieldValue.ArrayUnion(uid) } };
+
+        usersCollection.Document(user.uid).UpdateAsync(update).ContinueWithOnMainThread(task =>
+        {
+            if (!task.IsCompleted)
+            {
+                ErrorHandler.Show("Cannot accept friend check your internet conncetion");
+                return;
+            }
+
+            var localUpdate = new Dictionary<string, object>() { { "sentRequests", FieldValue.ArrayRemove(user.uid) }, { "friends", FieldValue.ArrayUnion(user.uid) } };
+            usersCollection.Document(uid).UpdateAsync(localUpdate).ContinueWithOnMainThread(task2 => {
+                user.sentRequests.Remove(uid);
+                user.friends.Add(uid);
+            });
+        });
+    }
+
+    public static void RejectFriend(string uid)
+    {
+        var update = new Dictionary<string, object>() { { "requests", FieldValue.ArrayRemove(uid) } };
+
+        usersCollection.Document(user.uid).UpdateAsync(update).ContinueWithOnMainThread(task =>
+        {
+            if (!task.IsCompleted)
+            {
+                ErrorHandler.Show("Cannot accept friend check your internet conncetion");
+                return;
+            }
+
+            var localUpdate = new Dictionary<string, object>() { { "sentRequests", FieldValue.ArrayRemove(user.uid) } };
+            usersCollection.Document(uid).UpdateAsync(localUpdate).ContinueWithOnMainThread(task2 => {
+                user.sentRequests.Remove(uid);
+            });
+        });
+    }
+
+    public static void SendGift(string uid, string product, Action onSuccess, Action onError)
+    {
+        var update = new Dictionary<string, object>() { { "gifts", FieldValue.ArrayUnion(new Gift() { sender = user.uid, product = product }) } };
+
+        usersCollection.Document(uid).UpdateAsync(update).ContinueWithOnMainThread(task =>
+        {
+            if (!task.IsCompleted)
+            {
+                ErrorHandler.Show("Couldn't send gift", "please check your internet connection", onError);
+                return;
+            }
+
+            onSuccess();
+        });
+    }
+
+    public static void AcceptGift(Gift gift)
+    {
+        int i = user.gifts.IndexOf(gift);
+        if(i == -1)
+        {
+            ErrorHandler.Show("Gift not found");
+            return;
+        }
+
+        gift.expiryDate = DateTime.Now.AddMonths(1);
+        var update = new Dictionary<string, object>() { { "gifts", user.gifts } };
+
+        usersCollection.Document(user.uid).UpdateAsync(update).ContinueWithOnMainThread(task =>
+        {
+            if (!task.IsCompleted)
+            {
+                ErrorHandler.Show("Couldn't send gift, please check your internet connection");
+                return;
+            }
         });
     }
 
