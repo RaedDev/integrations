@@ -82,7 +82,7 @@ public static class FirebaseManager
     {
         notesCollection.GetSnapshotAsync().ContinueWithOnMainThread(task =>
         {
-            if(!task.IsCompleted)
+            if( task.IsFaulted || task.IsCanceled)
             {
                 return;
             }
@@ -110,7 +110,7 @@ public static class FirebaseManager
 
         conversationsCollection.WhereArrayContainsAny("users", new List<object>() { other.uid, user.uid } ).GetSnapshotAsync().ContinueWithOnMainThread(task =>
         {
-            if (!task.IsCompleted)
+            if ( task.IsFaulted || task.IsCanceled)
             {
                 ErrorHandler.Show("Error while opening conversation please check your internet connection");
                 return;
@@ -151,15 +151,14 @@ public static class FirebaseManager
     {
         campaignsCollection.GetSnapshotAsync().ContinueWithOnMainThread(task =>
         {
-            if(task.IsCompleted)
-            {
-                campaigns = task.Result.Documents.Select(doc => { var c = doc.ConvertTo<Campaign>(); c.id = doc.Id; return c; })
-                    .Where(campaign => campaign.expiryDate > DateTime.Now || campaign.expiryDate.Ticks == 0).ToList();
-            }
-            else
+            if (task.IsFaulted || task.IsCanceled)
             {
                 ErrorHandler.Show("Firebase firestore connection error can't get campaigns");
+                return;
             }
+
+            campaigns = task.Result.Documents.Select(doc => { var c = doc.ConvertTo<Campaign>(); c.id = doc.Id; return c; })
+                .Where(campaign => campaign.expiryDate > DateTime.Now || campaign.expiryDate.Ticks == 0).ToList();
         });
     }
 
@@ -247,11 +246,13 @@ public static class FirebaseManager
             if (task.IsCanceled)
             {
                 Debug.LogError("CreateUserWithEmailAndPasswordAsync was canceled.");
+                LoadingPanel.Hide();
                 return;
             }
             if (task.IsFaulted)
             {
-                Debug.LogError("CreateUserWithEmailAndPasswordAsync encountered an error: " + task.Exception);
+                ErrorHandler.Show("CreateUserWithEmailAndPasswordAsync encountered an error: " + task.Exception);
+                LoadingPanel.Hide();
                 return;
             }
 
@@ -263,9 +264,10 @@ public static class FirebaseManager
     public static void SignupWithEmail(string email, string password)
     {
         auth.CreateUserWithEmailAndPasswordAsync(email, password).ContinueWithOnMainThread(task => {
-            if (!task.IsCompleted)
+            if ( task.IsFaulted || task.IsCanceled)
             {
                 Debug.LogError("CreateUserWithEmailAndPasswordAsync encountered an error: " + task.Exception);
+                LoadingPanel.Hide();
                 return;
             }
 
@@ -278,9 +280,10 @@ public static class FirebaseManager
     {
         auth.SignInAnonymouslyAsync().ContinueWithOnMainThread(task =>
         {
-            if (!task.IsCompleted)
+            if ( task.IsFaulted || task.IsCanceled)
             {
                 Debug.LogError("Something went wrong check your internet connection");
+                LoadingPanel.Hide();
                 return;
             }
 
@@ -296,33 +299,31 @@ public static class FirebaseManager
 
     static void OnSignedIn(Action<LoginResult> onSignedIn)
     {
-        if(onSignedIn == null)
+        if (onSignedIn == null)
         {
             onSignedIn = defaultSignedInAction;
         }
         usersCollection.Document(fbUser.UserId).GetSnapshotAsync().ContinueWithOnMainThread(task =>
         {
             LoadingPanel.Hide();
-            if (task.IsCompleted)
-            {
-                if (!task.Result.Exists)
-                {
-                    onSignedIn?.Invoke(LoginResult.NewUser);
-                }
-                else
-                {
-                    user = task.Result.ConvertTo<User>();
-                    user.uid = task.Result.Id;
-                    iapManager = new IAPManager();
-                    iapManager.Initlize();
-
-                    onSignedIn?.Invoke(LoginResult.Successful);
-                }
-            }
-            else
+            if (task.IsFaulted || task.IsCanceled)
             {
                 onSignedIn?.Invoke(LoginResult.Failure);
                 return;
+            }
+
+            if (!task.Result.Exists)
+            {
+                onSignedIn?.Invoke(LoginResult.NewUser);
+            }
+            else
+            {
+                user = task.Result.ConvertTo<User>();
+                user.uid = task.Result.Id;
+                iapManager = new IAPManager();
+                iapManager.Initlize();
+
+                onSignedIn?.Invoke(LoginResult.Successful);
             }
         });
     }
@@ -331,7 +332,7 @@ public static class FirebaseManager
     {
         usersCollection.Document(u.uid).SetAsync(u).ContinueWithOnMainThread(task =>
         {
-            if (!task.IsCompleted)
+            if ( task.IsFaulted || task.IsCanceled)
             {
                 ErrorHandler.Show("Can't set user");
                 return;
@@ -346,7 +347,7 @@ public static class FirebaseManager
         Credential credential = GoogleAuthProvider.GetCredential("", null);
         auth.SignInWithCredentialAsync(credential).ContinueWithOnMainThread(task =>
         {
-            if (!task.IsCompleted)
+            if ( task.IsFaulted || task.IsCanceled)
             {
                 ErrorHandler.Show("Something went wrong");
             }
@@ -361,7 +362,7 @@ public static class FirebaseManager
 
         db.Collection("users").Document().SetAsync(u).ContinueWithOnMainThread(task =>
         {
-            if (!task.IsCompleted)
+            if ( task.IsFaulted || task.IsCanceled)
             {
                 ErrorHandler.Show("Something went wrong while adding user data");
                 return;
@@ -373,7 +374,7 @@ public static class FirebaseManager
     {
         usersCollection.Document(uid).GetSnapshotAsync().ContinueWithOnMainThread(task =>
         {
-            if (!task.IsCompleted)
+            if ( task.IsFaulted || task.IsCanceled)
             {
                 ErrorHandler.Show("Cannot get user check your internet conncetion");
                 return;
@@ -402,7 +403,7 @@ public static class FirebaseManager
 
         usersCollection.Document(uid).UpdateAsync(update).ContinueWithOnMainThread(task =>
         {
-            if (!task.IsCompleted)
+            if ( task.IsFaulted || task.IsCanceled)
             {
                 ErrorHandler.Show("Cannot send friend request check your internet connection");
                 return;
@@ -422,7 +423,7 @@ public static class FirebaseManager
 
         usersCollection.Document(user.uid).UpdateAsync(update).ContinueWithOnMainThread(task =>
         {
-            if (!task.IsCompleted)
+            if ( task.IsFaulted || task.IsCanceled)
             {
                 ErrorHandler.Show("Cannot accept friend check your internet conncetion");
                 return;
@@ -442,7 +443,7 @@ public static class FirebaseManager
 
         usersCollection.Document(user.uid).UpdateAsync(update).ContinueWithOnMainThread(task =>
         {
-            if (!task.IsCompleted)
+            if ( task.IsFaulted || task.IsCanceled)
             {
                 ErrorHandler.Show("Cannot accept friend check your internet conncetion");
                 return;
@@ -461,7 +462,7 @@ public static class FirebaseManager
 
         usersCollection.Document(uid).UpdateAsync(update).ContinueWithOnMainThread(task =>
         {
-            if (!task.IsCompleted)
+            if ( task.IsFaulted || task.IsCanceled)
             {
                 ErrorHandler.Show("Couldn't send gift", "please check your internet connection", onError);
                 return;
@@ -485,7 +486,7 @@ public static class FirebaseManager
 
         usersCollection.Document(user.uid).UpdateAsync(update).ContinueWithOnMainThread(task =>
         {
-            if (!task.IsCompleted)
+            if ( task.IsFaulted || task.IsCanceled)
             {
                 ErrorHandler.Show("Couldn't send gift, please check your internet connection");
                 return;

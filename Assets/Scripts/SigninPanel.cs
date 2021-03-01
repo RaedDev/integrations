@@ -35,7 +35,7 @@ public class SigninPanel : MonoBehaviour
 
     public void SigninWithApple()
     {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+
     }
 
     public void GoToSignWithEmail()
@@ -56,6 +56,8 @@ public class SigninPanel : MonoBehaviour
         }
 
         FirebaseManager.SigninWithEmail(emailField.text, passwordField.text);
+
+        LoadingPanel.ShowLoading();
     }
 
     public void SignupWithEmail()
@@ -75,6 +77,7 @@ public class SigninPanel : MonoBehaviour
 
     public void SignInAnonymously()
     {
+        LoadingPanel.ShowLoading();
         FirebaseManager.SigninAnonymously();
     }
 
