@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+
 public class AdSample : MonoBehaviour
 {
     public GameObject adPrefab;
@@ -41,25 +42,6 @@ public class AdSample : MonoBehaviour
 
         var impressions = Instantiate(line, adPanel.transform);
         impressions.GetComponent<Text>().text = "impressions: " + campaign.impressions.ToString();
-        Debug.Log(campaign.img);
-        StartCoroutine(LoadRawImage(campaign.img.ToString()));
-
-    }
-
-
-    IEnumerator LoadRawImage(string imgUrl)
-
-    {
-        var request2 = UnityWebRequest.Get(imgUrl);
-        request2.downloadHandler = new DownloadHandlerTexture();
-        yield return request2.SendWebRequest();
-        if (request2.isNetworkError || request2.error != null)
-        {
-            
-            yield break;
-        }
-
-        adPrefab.GetComponent<RawImage>().texture = DownloadHandlerTexture.GetContent(request2);
     }
 
     public void movescene()

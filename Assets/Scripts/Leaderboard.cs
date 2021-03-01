@@ -38,7 +38,7 @@ public static class Leaderboard
     {
         db.Collection(id).Document(FirebaseManager.user.uid).GetSnapshotAsync().ContinueWithOnMainThread(task =>
         {
-            if (!task.IsCompleted)
+            if (task.IsFaulted || task.IsCanceled)
             {
                 ErrorHandler.Show("Error submitting score to the leaderboard, check your internet connection");
                 return;

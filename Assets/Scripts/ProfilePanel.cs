@@ -65,7 +65,7 @@ public class ProfilePanel : MonoBehaviour
         {
             FirebaseManager.usersCollection.Document(friend).GetSnapshotAsync().ContinueWithOnMainThread(task =>
             {
-                if (!task.IsCompleted)
+                if (task.IsFaulted || task.IsCanceled)
                 {
                     ErrorHandler.Show("Unable to find friend data, please check your internet connection");
                     return;
