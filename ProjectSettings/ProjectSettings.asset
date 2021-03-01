@@ -244,7 +244,7 @@ PlayerSettings:
   AndroidTargetArchitectures: 5
   AndroidSplashScreenScale: 0
   androidSplashScreen: {fileID: 0}
-  AndroidKeystoreName: C:/Stuff/Projects/RABABA/Integrations17/HajwalaKey.keystore
+  AndroidKeystoreName: C:/Projects/Hajwala/integration firebase/integrations/HajwalaKey.keystore
   AndroidKeyaliasName: rababagames
   AndroidTVCompatibility: 1
   AndroidIsGame: 1
