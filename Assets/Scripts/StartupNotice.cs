@@ -8,26 +8,28 @@ public class StartupNotice : MonoBehaviour
     public Text titleText;
     public Button button;
 
-    public static void ShowNote(string title, string description, System.Action action)
+    public static void ShowNote(string type, string description, System.Action action)
     {
         StartupNotice Instance = (Instantiate(Resources.Load("StartupNotice")) as GameObject).GetComponent<StartupNotice>();
 
-        Instance.Setup(title, action);
+        Instance.Setup(type, action);
     }
 
-    public void Setup(string title, System.Action action)
+    public void Setup(string type, System.Action action)
     {
-        titleText.text = title;
+        titleText.text = type;
 
         button.onClick.AddListener(() =>
         {
-            if(action == null)
+            Destroy(gameObject);
+            action?.Invoke();
+
+            if(type == "offer")
             {
-                Destroy(gameObject);
-            } 
-            else
-            {
-                action();
+                if(FirebaseManager.user != null)
+                {
+                    StorePanel.Show();
+                }
             }
         });
     }
