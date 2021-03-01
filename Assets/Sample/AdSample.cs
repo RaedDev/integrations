@@ -42,6 +42,11 @@ public class AdSample : MonoBehaviour
 
         var impressions = Instantiate(line, adPanel.transform);
         impressions.GetComponent<Text>().text = "impressions: " + campaign.impressions.ToString();
+
+        NetworkHelper.DownloadSprite(this, campaign.img, sprite =>
+        {
+            adPanel.GetComponent<Image>().sprite = sprite;
+        });
     }
 
     public void movescene()
