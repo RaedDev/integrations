@@ -13,6 +13,21 @@ public class SigninPanel : MonoBehaviour
     public InputField emailField;
     public InputField passwordField;
 
+    void Start()
+    {
+        if(FirebaseManager.auth.CurrentUser != null)
+        {
+            if(FirebaseManager.user != null)
+            {
+                OnLoggedIn(LoginResult.Successful);
+            }
+            else
+            {
+                OnLoggedIn(LoginResult.NewUser);
+            }
+        }
+    }
+
     public void SigninWithGoogle()
     {
         FirebaseManager.AddUser();

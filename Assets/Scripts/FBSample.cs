@@ -14,6 +14,7 @@ public class FBSample : MonoBehaviour
 
     void OnSignedIn(LoginResult res)
     {
+        Debug.Log(res);
         FindObjectOfType<SigninPanel>().OnLoggedIn(res);
     }
 
@@ -69,5 +70,10 @@ public class FBSample : MonoBehaviour
     public void Link()
     {
 
+    }
+
+    public void Back()
+    {
+        SceneManager.LoadScene(0);
     }
 }

@@ -40,7 +40,12 @@ public static class FirebaseManager
 
     public static void InitializeFirebase(Action<LoginResult> onSignedIn = null, Action onSignedOut = null)
     {
-        if (ready) return;
+        if (ready)
+        {
+            defaultSignedInAction = onSignedIn;
+            defaultOnSignedOut = onSignedOut;
+            return;
+        }
 
         LoadingPanel.ShowLoading();
 
@@ -324,17 +329,15 @@ public static class FirebaseManager
 
     public static void SetUser(User u)
     {
-        if(user == null)
-        {
-            user = u;
-        }
-
         usersCollection.Document(u.uid).SetAsync(u).ContinueWithOnMainThread(task =>
         {
             if (!task.IsCompleted)
             {
                 ErrorHandler.Show("Can't set user");
+                return;
             }
+
+            user = u;
         });
     }
 
