@@ -7,17 +7,23 @@ public class StartupNotice : MonoBehaviour
 {
     public Text titleText;
     public Button button;
+    public Image noticeSprite;
 
-    public static void ShowNote(string type, string description, System.Action action)
+    public static void ShowNote(string type, string img, System.Action action)
     {
         StartupNotice Instance = (Instantiate(Resources.Load("StartupNotice")) as GameObject).GetComponent<StartupNotice>();
 
-        Instance.Setup(type, action);
+        Instance.Setup(type, img, action);
     }
 
-    public void Setup(string type, System.Action action)
+    public void Setup(string type, string img, System.Action action)
     {
         titleText.text = type;
+        NetworkHelper.DownloadSprite(this, img, sprite =>
+        {
+            noticeSprite.sprite = sprite;
+        });
+
 
         button.onClick.AddListener(() =>
         {

@@ -30,12 +30,12 @@ public class SigninPanel : MonoBehaviour
 
     public void SigninWithGoogle()
     {
-        FirebaseManager.AddUser();
+        FirebaseManager.SignInWithGoogle();
     }
 
     public void SigninWithApple()
     {
-
+        //FirebaseManager.Sin();
     }
 
     public void GoToSignWithEmail()

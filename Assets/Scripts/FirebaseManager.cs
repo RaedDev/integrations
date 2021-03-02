@@ -8,6 +8,7 @@ using System;
 using System.Linq;
 using Firebase.Extensions;
 using Firebase.Database;
+using Google;
 
 public enum LoginResult
 {
@@ -63,6 +64,7 @@ public static class FirebaseManager
 
                 GetCampaigns();
                 LoadStartupNotes();
+                ConfigureGoogleAuthentication();
 
                 ready = true;
 
@@ -78,6 +80,19 @@ public static class FirebaseManager
         });
     }
 
+    static void ConfigureGoogleAuthentication()
+    {
+        GoogleSignInConfiguration configuration = new GoogleSignInConfiguration
+        {
+            WebClientId = "620570136285-jjopvkden8utog1odn07jd135raebdej.apps.googleusercontent.com",
+            RequestIdToken = true
+        };
+
+        GoogleSignIn.Configuration = configuration;
+        GoogleSignIn.Configuration.UseGameSignIn = false;
+        GoogleSignIn.Configuration.RequestIdToken = true;
+    }
+
     static void LoadStartupNotes()
     {
         notesCollection.GetSnapshotAsync().ContinueWithOnMainThread(task =>
@@ -90,7 +105,7 @@ public static class FirebaseManager
             var docs = task.Result.Documents.ToList();
             foreach (var doc in docs)
             {
-                StartupNotice.ShowNote(doc.GetValue<string>("type"), "", null);
+                StartupNotice.ShowNote(doc.GetValue<string>("type"), doc.GetValue<string>("img"), null);
             }
         });
     }
@@ -344,13 +359,28 @@ public static class FirebaseManager
 
     public static void SignInWithGoogle()
     {
-        Credential credential = GoogleAuthProvider.GetCredential("", null);
-        auth.SignInWithCredentialAsync(credential).ContinueWithOnMainThread(task =>
+        // android 620570136285-tu68fse9qup2replbhsvfsl767r8i3i2.apps.googleusercontent.com
+        // ios 620570136285-rnqjkrgqg22j5cc39bsvotei7nq98ks4.apps.googleusercontent.com
+        // web 620570136285-jjopvkden8utog1odn07jd135raebdej.apps.googleusercontent.com
+
+        
+
+        GoogleSignIn.DefaultInstance.SignIn().ContinueWithOnMainThread(token => 
         {
-            if ( task.IsFaulted || task.IsCanceled)
+            if(token.IsCanceled || token.IsFaulted)
             {
-                ErrorHandler.Show("Something went wrong");
+                ErrorHandler.Show("Sign in with google was not successful");
+                return;
             }
+
+            Credential credential = GoogleAuthProvider.GetCredential(token.Result.IdToken, null);
+            auth.SignInWithCredentialAsync(credential).ContinueWithOnMainThread(task =>
+            {
+                if ( task.IsFaulted || task.IsCanceled)
+                {
+                    ErrorHandler.Show("Something went wrong");
+                }
+            });
         });
     }
 
