@@ -524,6 +524,35 @@ public static class FirebaseManager
         });
     }
 
+    public static void ChangePicture(Action<string, Texture2D> onPicture)
+    {
+        var permession = NativeGallery.GetImageFromGallery(path =>
+        {
+            var texture = NativeGallery.LoadImageAtPath(path);
+
+            if (texture == null)
+            {
+                ErrorHandler.Show("Can't load image");
+                return;
+            }
+
+            var imgRef = Firebase.Storage.FirebaseStorage.DefaultInstance.RootReference.Child(auth.CurrentUser.UserId + ".jpg");
+            imgRef.PutFileAsync(path).ContinueWithOnMainThread(task =>
+            {
+                if (task.IsFaulted || task.IsCanceled)
+                {
+                    ErrorHandler.Show("Error uploading picture");
+                    return;
+                }
+
+                imgRef.GetDownloadUrlAsync().ContinueWithOnMainThread(task2 =>
+                {
+                    onPicture(task2.Result.ToString(), texture);
+                });
+            });
+        });
+    }
+
     public static void Test()
     {
         db.Collection("users").GetSnapshotAsync().ContinueWithOnMainThread(task =>

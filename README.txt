@@ -5,8 +5,7 @@ Firebase SDK dotnet4
 - Firebase Messaging
 - Firebase Auth
 - Firebase Database
-
-- CloudOnce
+- Firebase Storage
 
 - Google sign in unity
 - Sign in with apple

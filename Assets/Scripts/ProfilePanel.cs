@@ -77,4 +77,15 @@ public class ProfilePanel : MonoBehaviour
             });
         }
     }
+
+    public void ChangePicture()
+    {
+        FirebaseManager.ChangePicture((imgPath, texture) =>
+        {
+            image.sprite = Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f), 100f);
+            currentUser.img = imgPath;
+
+            FirebaseManager.SetUser(currentUser);
+        });
+    }
 }

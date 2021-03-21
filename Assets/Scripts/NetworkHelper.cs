@@ -20,7 +20,7 @@ public static class NetworkHelper {
         yield return www.SendWebRequest();
         if (www.isNetworkError || www.isHttpError)
         {
-            Debug.Log(www.error);
+            Debug.Log(www.error + " " + img);
             onError?.Invoke();
         }
         else

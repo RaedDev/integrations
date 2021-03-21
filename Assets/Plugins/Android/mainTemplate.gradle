@@ -34,7 +34,7 @@ allprojects {
             url "https://maven.google.com"
         }
         maven {
-            url (unityProjectPath + "/Assets/GeneratedLocalRepo/Firebase/m2repository") // Assets/Firebase/Editor/AppDependencies.xml:22, Assets/Firebase/Editor/AuthDependencies.xml:20, Assets/Firebase/Editor/DatabaseDependencies.xml:20, Assets/Firebase/Editor/FirestoreDependencies.xml:20, Assets/Firebase/Editor/InstallationsDependencies.xml:20, Assets/Firebase/Editor/MessagingDependencies.xml:20
+            url (unityProjectPath + "/Assets/GeneratedLocalRepo/Firebase/m2repository") // Assets/Firebase/Editor/AppDependencies.xml:22, Assets/Firebase/Editor/AuthDependencies.xml:20, Assets/Firebase/Editor/DatabaseDependencies.xml:20, Assets/Firebase/Editor/FirestoreDependencies.xml:20, Assets/Firebase/Editor/InstallationsDependencies.xml:20, Assets/Firebase/Editor/MessagingDependencies.xml:20, Assets/Firebase/Editor/StorageDependencies.xml:20
         }
         maven {
             url (unityProjectPath + "/Assets/GeneratedLocalRepo/GoogleSignIn/Editor/m2repository") // Assets/GoogleSignIn/Editor/GoogleSignInSupportDependencies.xml:9
@@ -52,7 +52,7 @@ dependencies {
 // Android Resolver Dependencies Start
     implementation 'com.google.android.gms:play-services-auth:16+' // Assets/GoogleSignIn/Editor/GoogleSignInDependencies.xml:10
     implementation 'com.google.android.gms:play-services-base:17.5.0' // Assets/Firebase/Editor/AppDependencies.xml:17
-    implementation 'com.google.firebase:firebase-analytics:18.0.0' // Assets/Firebase/Editor/MessagingDependencies.xml:15
+    implementation 'com.google.firebase:firebase-analytics:18.0.0' // Assets/Firebase/Editor/StorageDependencies.xml:15
     implementation 'com.google.firebase:firebase-app-unity:7.0.2' // Assets/Firebase/Editor/AppDependencies.xml:22
     implementation 'com.google.firebase:firebase-auth:20.0.0' // Assets/Firebase/Editor/AuthDependencies.xml:13
     implementation 'com.google.firebase:firebase-auth-unity:7.0.2' // Assets/Firebase/Editor/AuthDependencies.xml:20
@@ -65,6 +65,8 @@ dependencies {
     implementation 'com.google.firebase:firebase-installations-unity:7.0.2' // Assets/Firebase/Editor/InstallationsDependencies.xml:20
     implementation 'com.google.firebase:firebase-messaging:21.0.0' // Assets/Firebase/Editor/MessagingDependencies.xml:13
     implementation 'com.google.firebase:firebase-messaging-unity:7.0.2' // Assets/Firebase/Editor/MessagingDependencies.xml:20
+    implementation 'com.google.firebase:firebase-storage:19.2.0' // Assets/Firebase/Editor/StorageDependencies.xml:13
+    implementation 'com.google.firebase:firebase-storage-unity:7.0.2' // Assets/Firebase/Editor/StorageDependencies.xml:20
     implementation 'com.google.signin:google-signin-support:1.0.4' // Assets/GoogleSignIn/Editor/GoogleSignInSupportDependencies.xml:9
 // Android Resolver Dependencies End
 **DEPS**}
