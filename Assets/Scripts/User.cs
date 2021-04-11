@@ -14,12 +14,16 @@ public class User
     public string uid;
 
     [FirestoreProperty()] public string username { get; set; }
+    [FirestoreProperty()] public string id { get; set; }
+    [FirestoreProperty()] public string email { get; set; }
     [FirestoreProperty()] public string bio { get; set; }
     [FirestoreProperty()] public string img { get; set; }
     [FirestoreProperty()] public List<Gift> gifts { get; set; } = new List<Gift>();
     [FirestoreProperty()] public List<string> friends { get; set; } = new List<string>();
     [FirestoreProperty()] public List<string> requests { get; set; } = new List<string>();
     [FirestoreProperty()] public List<string> sentRequests { get; set; } = new List<string>();
+
+    public bool isMe { get { return uid == FirebaseManager.user.uid; } }
 }
 
 public enum ProductIDs

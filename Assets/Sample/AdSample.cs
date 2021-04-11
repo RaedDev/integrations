@@ -21,6 +21,10 @@ public class AdSample : MonoBehaviour
         var campaign = FirebaseManager.GetAd();
 
         var adPanel = Instantiate(adPrefab, content);
+
+        // Where the image is taken
+        var img = campaign.GetRandomImg();
+        var video = campaign.GetRandomVideo();
         
         var id = Instantiate(line, adPanel.transform);
         id.GetComponent<Text>().text = "id: " + campaign.id;
@@ -31,11 +35,11 @@ public class AdSample : MonoBehaviour
         var maxCoverage = Instantiate(line, adPanel.transform);
         maxCoverage.GetComponent<Text>().text = "maxCoverage: " + campaign.maxCoverage;
 
-        var img = Instantiate(line, adPanel.transform);
-        img.GetComponent<Text>().text = "img: " + campaign.img;
+        var imgText = Instantiate(line, adPanel.transform);
+        imgText.GetComponent<Text>().text = "img: " + img;
 
-        var video = Instantiate(line, adPanel.transform);
-        video.GetComponent<Text>().text = "video: " + campaign.video;
+        var videoText = Instantiate(line, adPanel.transform);
+        videoText.GetComponent<Text>().text = "video: " + video;
 
         var link = Instantiate(line, adPanel.transform);
         link.GetComponent<Text>().text = "link: " + campaign.link;
@@ -43,7 +47,7 @@ public class AdSample : MonoBehaviour
         var impressions = Instantiate(line, adPanel.transform);
         impressions.GetComponent<Text>().text = "impressions: " + campaign.impressions.ToString();
 
-        NetworkHelper.DownloadSprite(this, campaign.img, sprite =>
+        NetworkHelper.DownloadSprite(this, img, sprite =>
         {
             adPanel.GetComponent<Image>().sprite = sprite;
         });

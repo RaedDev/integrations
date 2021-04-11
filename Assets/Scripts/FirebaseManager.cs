@@ -362,9 +362,6 @@ public static class FirebaseManager
         // android 620570136285-tu68fse9qup2replbhsvfsl767r8i3i2.apps.googleusercontent.com
         // ios 620570136285-rnqjkrgqg22j5cc39bsvotei7nq98ks4.apps.googleusercontent.com
         // web 620570136285-jjopvkden8utog1odn07jd135raebdej.apps.googleusercontent.com
-
-        
-
         GoogleSignIn.DefaultInstance.SignIn().ContinueWithOnMainThread(token => 
         {
             if(token.IsCanceled || token.IsFaulted)
@@ -373,13 +370,67 @@ public static class FirebaseManager
                 return;
             }
 
-            Credential credential = GoogleAuthProvider.GetCredential(token.Result.IdToken, null);
-            auth.SignInWithCredentialAsync(credential).ContinueWithOnMainThread(task =>
-            {
-                if ( task.IsFaulted || task.IsCanceled)
+            //Debug.Log(token.Result.Email);
+            //usersCollection.WhereEqualTo("email", token.Result.Email.ToLower()).GetSnapshotAsync().ContinueWithOnMainThread(userWithSameEmail =>
+            //{
+                if (token.IsCanceled || token.IsFaulted)
                 {
-                    ErrorHandler.Show("Something went wrong");
+                    ErrorHandler.Show("Sign in with google was not successful");
+                    return;
                 }
+
+                //if(userWithSameEmail.Result.Count != 0)
+                //{
+                //    ErrorHandler.Show("Another user is already using this email");
+                //    return;
+                //}
+
+                Credential credential = GoogleAuthProvider.GetCredential(token.Result.IdToken, null);
+                auth.SignInWithCredentialAsync(credential).ContinueWithOnMainThread(task =>
+                {
+                    if (task.IsFaulted || task.IsCanceled)
+                    {
+                        ErrorHandler.Show("Something went wrong");
+                    }
+                });
+            //});
+        });
+    }
+
+    public static void LinkWithGoogle(Action callback)
+    {
+        GoogleSignIn.DefaultInstance.SignIn().ContinueWithOnMainThread(token =>
+        {
+            if (token.IsCanceled || token.IsFaulted)
+            {
+                ErrorHandler.Show("Sign in with google was not successful");
+                return;
+            }
+
+            usersCollection.WhereEqualTo("email", token.Result.Email.ToLower()).GetSnapshotAsync().ContinueWithOnMainThread(userWithSameEmail =>
+            {
+                if (token.IsCanceled || token.IsFaulted)
+                {
+                    ErrorHandler.Show("Sign in with google was not successful");
+                    return;
+                }
+
+                if (userWithSameEmail.Result.Count != 0)
+                {
+                    ErrorHandler.Show("Another user is already using this email");
+                    return;
+                }
+
+                Credential credential = GoogleAuthProvider.GetCredential(token.Result.IdToken, null);
+                auth.CurrentUser.LinkWithCredentialAsync(credential).ContinueWithOnMainThread(task =>
+                {
+                    if (task.IsFaulted || task.IsCanceled)
+                    {
+                        ErrorHandler.Show("Something went wrong");
+                    }
+
+                    callback?.Invoke();
+                });
             });
         });
     }
@@ -526,7 +577,7 @@ public static class FirebaseManager
 
     public static void ChangePicture(Action<string, Texture2D> onPicture)
     {
-        var permession = NativeGallery.GetImageFromGallery(path =>
+        NativeGallery.GetImageFromGallery(path =>
         {
             var texture = NativeGallery.LoadImageAtPath(path);
 
@@ -555,16 +606,25 @@ public static class FirebaseManager
 
     public static void Test()
     {
-        db.Collection("users").GetSnapshotAsync().ContinueWithOnMainThread(task =>
-        {
-            if(task.IsFaulted)
-            {
-                Debug.LogError("Something went wrong");
-                return;
-            }
+        //db.Collection("users").GetSnapshotAsync().ContinueWithOnMainThread(task =>
+        //{
+        //    if(task.IsFaulted)
+        //    {
+        //        Debug.LogError("Something went wrong");
+        //        return;
+        //    }
 
-            List<User> u = task.Result.Documents.Select(x => x.ConvertTo<User>()).ToList();
-            Debug.Log(u);
+        //    List<User> u = task.Result.Documents.Select(x => x.ConvertTo<User>()).ToList();
+        //    Debug.Log(u);
+        //});
+        auth.FetchProvidersForEmailAsync("Raed.dev@gmail.com").ContinueWithOnMainThread(fetchedProviders =>
+        {
+            var data = fetchedProviders.Result.ToList();
+            Debug.Log(data.Count);
+            foreach(var d in data)
+            {
+                Debug.Log(d);
+            }
         });
     }
 }

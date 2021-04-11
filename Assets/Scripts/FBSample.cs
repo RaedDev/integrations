@@ -69,7 +69,10 @@ public class FBSample : MonoBehaviour
 
     public void Link()
     {
-
+        FirebaseManager.LinkWithGoogle(() =>
+        {
+            Debug.Log("Linked with google!");
+        });
     }
 
     public void Back()
